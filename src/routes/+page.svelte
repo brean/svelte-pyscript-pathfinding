@@ -14,6 +14,7 @@
 '# If your code does not run take a look at the browsers console for errors.',
 '',
 'from pathfinding.finder.a_star import AStarFinder',
+'from pathfinding.core.diagonal_movement import DiagonalMovement',
 '',
 'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)',
 'path, runs = finder.find_path(start, end, grid)',
@@ -47,7 +48,6 @@
 <!-- TODO: we should see a grid here that feeds into the python-script -->
 
 <py-script>
-from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 
 matrix = [
