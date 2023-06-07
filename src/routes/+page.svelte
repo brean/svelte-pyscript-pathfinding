@@ -63,7 +63,7 @@ end = grid.node(2, 2)
 
 <div bind:this={divEl} class="me" />
 
-<!-- TODO: when I press the button something should happen -->
+<!-- TODO: select from different code examples -->
 <div class="fabs" role="group" aria-label="Floating action buttons">
   <button on:click={() => {pyscript.interpreter.run(('grid.cleanup()\n' + editor.getValue()))}} class="fab" title="Run code" aria-label="Run code">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
