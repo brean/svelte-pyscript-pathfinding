@@ -1,8 +1,5 @@
 <script lang="ts">
 
-  let innerHeight = 0;
-  let innerWidth = 0;
-
   import type monaco from 'monaco-editor';
   import { onMount } from 'svelte';
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -10,7 +7,12 @@
   let divEl: HTMLDivElement;
   let editor: monaco.editor.IStandaloneCodeEditor;
   let Monaco;
-  let code = ['from pathfinding.finder.a_star import AStarFinder',
+  let code = ['# Just play around with the code here and',
+'# press the rocket 🚀 in the bottom right.',
+'# the variables *matrix*, *start* and *end* are already defined.',
+'# It runs in your local browser using pyscript.',
+'',
+'from pathfinding.finder.a_star import AStarFinder',
 '',
 'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)',
 'path, runs = finder.find_path(start, end, grid)',
