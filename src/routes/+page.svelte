@@ -179,6 +179,7 @@
     code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
     console.log(code);
+    // @ts-ignore
     const interpreter: any = pyscript.interpreter;
     await interpreter.run(code);
     let pypath: any = interpreter.globals.get('path');
