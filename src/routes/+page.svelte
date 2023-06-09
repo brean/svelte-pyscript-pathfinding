@@ -10,7 +10,7 @@
   const END = -3;
 
   const GRIDSIZE = 20;
-  const GRIDBORDER = true;
+  const GRIDBORDER = GRIDSIZE > 3;
 
   let changed = true;
   let path: any[] = [];
@@ -23,8 +23,8 @@
 
   // note that points here are [x, y] while you access the matrix in [y][x]
   // which allows you to get a full row (all x values) by the column number (y)
-  let start = [10, 10];
-  let end = [20, 10];
+  let start = [10, 9];
+  let end = [20, 11];
   let matrix: any = [[WALKABLE]];
 
   let divEl: HTMLDivElement;
@@ -34,7 +34,7 @@
   let Monaco;
   let code = ['# Here you can test python-pathfinding directly.',
 '# Press the rocket 🚀 in the bottom right to execute this code.',
-'# The variables "grid", "matrix", "start" and "end" are already defined from the',
+'# The variables "grid", "matrix", "start" and "end" are already defined by the',
 '# interactive grid on the left, but you can overwrite it here if you want.',
 '# It runs in your local browser using pyscript, there\'s no save!',
 '# If your code does not run take a look at the browsers console for errors.',
@@ -176,6 +176,14 @@
     const x = Math.floor((e.clientX - 8) / GRIDSIZE);
     const y = Math.floor((e.clientY - 8) / GRIDSIZE);
     // check for start/end Point
+    if (start && start[0] == x && start[1] == y) {
+      currentPointerValue = START;
+      return
+    }
+    if (end && end[0] == x && end[1] == y) {
+      currentPointerValue = END;
+      return
+    }
 
     currentPointerValue = matrix[y][x] === OBSTACLE ? WALKABLE : OBSTACLE;
     matrix[y][x] = currentPointerValue;
@@ -187,6 +195,14 @@
     }
     const x = Math.floor((e.clientX - 8) / GRIDSIZE);
     const y = Math.floor((e.clientY - 8) / GRIDSIZE);
+    if (currentPointerValue === START) {
+      start = [x, y];
+      return
+    }
+    if (currentPointerValue === END) {
+      end = [x, y];
+      return
+    }
     matrix[y][x] = currentPointerValue;
   }
 
@@ -201,7 +217,6 @@
     code += `start = grid.node(${start[0]}, ${start[1]})\n`;
     code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
-    console.log(code);
     // @ts-ignore
     const interpreter: any = pyscript.interpreter;
     await interpreter.run(code);
@@ -245,7 +260,6 @@ from pathfinding.core.grid import Grid
 ></canvas>
 
 <!-- TODO: select from different code examples -->
-<!-- TODO: move start/end -->
 <div class="fabs" role="group" aria-label="Floating action buttons">
   <button on:click={runPyScript} class="fab" title="Run code" aria-label="Run code">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
