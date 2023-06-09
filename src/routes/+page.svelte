@@ -4,6 +4,14 @@
   import { onMount, tick } from 'svelte';
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
+  const WALKABLE = 1;
+  const OBSTACLE = 0;
+  const START = -2;
+  const END = -3;
+
+  const GRIDSIZE = 20;
+  const GRIDBORDER = true;
+
   let changed = true;
   let path: any[] = [];
   let currentPointerValue = -1;
@@ -17,7 +25,7 @@
   // which allows you to get a full row (all x values) by the column number (y)
   let start = [10, 10];
   let end = [20, 10];
-  let matrix: any = [[1]];
+  let matrix: any = [[WALKABLE]];
 
   let divEl: HTMLDivElement;
   let canvasEl: HTMLCanvasElement;
@@ -26,11 +34,11 @@
   let Monaco;
   let code = ['# Here you can test python-pathfinding directly.',
 '# Press the rocket 🚀 in the bottom right to execute this code.',
-'# The variables grid, matrix, start and end are already defined from the',
+'# The variables "grid", "matrix", "start" and "end" are already defined from the',
 '# interactive grid on the left, but you can overwrite it here if you want.',
 '# It runs in your local browser using pyscript, there\'s no save!',
 '# If your code does not run take a look at the browsers console for errors.',
-'# You need to provide a variable path with your final path to draw the path on the map',
+'# You need to provide a variable "path" with points on the map to draw the path on the map',
 '',
 'from pathfinding.finder.a_star import AStarFinder',
 'from pathfinding.core.diagonal_movement import DiagonalMovement',
@@ -39,8 +47,8 @@
 'path, runs = finder.find_path(start, end, grid)'].join('\n')
 
   function rebuildGrid() {
-    gridHeight = Math.floor(canvasEl.height / 20);
-    gridWidth = Math.floor(canvasEl.width / 20);
+    gridHeight = Math.floor(canvasEl.height / GRIDSIZE);
+    gridWidth = Math.floor(canvasEl.width / GRIDSIZE);
     if (matrix.length < gridHeight) {
       const len = gridHeight - matrix.length;
       if (len < 1) {
@@ -57,11 +65,13 @@
         matrix[y].slice(gridWidth, matrix[y].length);
       } else {
         for (let x = 0; x < len; x++) {
-          matrix[y].push(1);
+          matrix[y].push(WALKABLE);
         }
       }
     }
-    matrix[10][15] = 0
+    matrix[9][15] = OBSTACLE;
+    matrix[10][15] = OBSTACLE;
+    matrix[11][15] = OBSTACLE;
   }
 
   function resizeWindow() {
@@ -70,50 +80,62 @@
   }
 
   function drawGrid(ctx: CanvasRenderingContext2D) {
-    ctx.lineWidth = 1;
-
-    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-    ctx.strokeStyle = 'black'
-
-    ctx.fillStyle = 'green';
-    ctx.fillRect(start[0] * 20, start[1] * 20, 20, 20);
-
-    ctx.fillStyle = 'red';
-    ctx.fillRect(end[0] * 20, end[1] * 20, 20, 20);
-
+    if (!canvasEl) {
+      requestAnimationFrame(() => {drawGrid(ctx)});
+      return
+    }
     if (matrix.length <= 1) {
       rebuildGrid();
     }
+    ctx.lineWidth = 1;
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
+    // draw start and end
+    ctx.fillStyle = 'green';
+    ctx.fillRect(start[0] * GRIDSIZE, start[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+
+    ctx.fillStyle = 'red';
+    ctx.fillRect(end[0] * GRIDSIZE, end[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+
+    // draw obstacles
     ctx.fillStyle = 'gray';
     for (let y = 0; y < matrix.length; y++) {
       for (let x = 0; x < matrix[y].length; x++) {
         if (matrix[y][x] <= 0) {
-          ctx.fillRect(x * 20, y * 20, 20, 20);
+          ctx.fillRect(x * GRIDSIZE, y * GRIDSIZE, GRIDSIZE, GRIDSIZE);
         }
       }
     }
     
-    for (let i = 0; i < matrix[0].length+1; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * 20 + 0.5, 0);
-      ctx.lineTo(i * 20 + 0.5, matrix.length * 20);
-      ctx.stroke();
+    // draw border
+    if (GRIDBORDER) {
+      ctx.strokeStyle = 'black'
+      for (let i = 0; i < matrix[0].length+1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * GRIDSIZE + 0.5, 0);
+        ctx.lineTo(i * GRIDSIZE + 0.5, matrix.length * GRIDSIZE);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < matrix.length+1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * GRIDSIZE + 0.5);
+        ctx.lineTo(matrix[0].length * GRIDSIZE, i * GRIDSIZE + 0.5);
+        ctx.stroke();
+      }
     }
 
-    for (let i = 0; i < matrix.length+1; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, i * 20 + 0.5);
-      ctx.lineTo(matrix[0].length * 20, i * 20 + 0.5);
-      ctx.stroke();
-    }
-
+    // draw path
     if (path.length > 1) {
       ctx.strokeStyle = 'darkred'
       ctx.beginPath();
-      ctx.moveTo(path[0][0] * 20 + 10.5, path[0][1] * 20 + 10.5);
+      ctx.moveTo(
+        path[0][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+        path[0][1] * GRIDSIZE + GRIDSIZE/2 + .5);
       for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(path[i][0] * 20 + 10.5, path[i][1] * 20 + 10.5);
+        ctx.lineTo(
+          path[i][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+          path[i][1] * GRIDSIZE + GRIDSIZE/2 + .5);
       }
       ctx.stroke();
     }
@@ -151,10 +173,11 @@
   });
 
   function pointerDownCanvas(e: PointerEvent) {
+    const x = Math.floor((e.clientX - 8) / GRIDSIZE);
+    const y = Math.floor((e.clientY - 8) / GRIDSIZE);
+    // check for start/end Point
 
-    const x = Math.floor((e.clientX - 8) / 20);
-    const y = Math.floor((e.clientY - 8) / 20);
-    currentPointerValue = matrix[y][x] === 0 ? 1 : 0;
+    currentPointerValue = matrix[y][x] === OBSTACLE ? WALKABLE : OBSTACLE;
     matrix[y][x] = currentPointerValue;
   }
 
@@ -162,8 +185,8 @@
     if (currentPointerValue === -1) {
       return
     }
-    const x = Math.floor((e.clientX - 8) / 20);
-    const y = Math.floor((e.clientY - 8) / 20);
+    const x = Math.floor((e.clientX - 8) / GRIDSIZE);
+    const y = Math.floor((e.clientY - 8) / GRIDSIZE);
     matrix[y][x] = currentPointerValue;
   }
 
@@ -173,7 +196,7 @@
 
   async function runPyScript() {
     path = []
-    let code = 'path = None\n';
+    let code = 'path = []\n';
     code += `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
     code += `start = grid.node(${start[0]}, ${start[1]})\n`;
     code += `end = grid.node(${end[0]}, ${end[1]})\n`;
