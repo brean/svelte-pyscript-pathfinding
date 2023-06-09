@@ -11,7 +11,8 @@ body {
 }
 
 pre.py-terminal {
-  display: hidden;
+  visibility: hidden;
+  display: none;
   /* TODO: display ontop  */
   /* width: 49%; */
 }
