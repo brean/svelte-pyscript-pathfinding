@@ -5,6 +5,7 @@
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
   let changed = true;
+  let path: any[] = [];
   let currentPointerValue = -1;
   let innerWidth = 0;
   let innerHeight = 0;
@@ -12,6 +13,8 @@
   let gridWidth = 0;
   let gridHeight = 0;
 
+  // note that points here are [x, y] while you access the matrix in [y][x]
+  // which allows you to get a full row (all x values) by the column number (y)
   let start = [10, 10];
   let end = [20, 10];
   let matrix: any = [[1]];
@@ -23,18 +26,17 @@
   let Monaco;
   let code = ['# Here you can test python-pathfinding directly.',
 '# Press the rocket 🚀 in the bottom right to execute this code.',
-'# The variables grid, start and end are already defined.',
+'# The variables grid, matrix, start and end are already defined from the',
+'# interactive grid on the left, but you can overwrite it here if you want.',
 '# It runs in your local browser using pyscript, there\'s no save!',
 '# If your code does not run take a look at the browsers console for errors.',
+'# You need to provide a variable path with your final path to draw the path on the map',
 '',
 'from pathfinding.finder.a_star import AStarFinder',
 'from pathfinding.core.diagonal_movement import DiagonalMovement',
 '',
 'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)',
-'path, runs = finder.find_path(start, end, grid)',
-'',
-"print('operations:', runs, 'path length:', len(path))",
-"print(grid.grid_str(path=path, start=start, end=end))"].join('\n')
+'path, runs = finder.find_path(start, end, grid)'].join('\n')
 
   function rebuildGrid() {
     gridHeight = Math.floor(canvasEl.height / 20);
@@ -44,22 +46,22 @@
       if (len < 1) {
         matrix.slice(gridHeight, matrix.length);
       } else {
-        for (let i = 0; i < len; i++) {
+        for (let y = 0; y < len; y++) {
           matrix.push([]);
         }
       }
     }
-    for (let i = 0; i < matrix.length; i++) {
-      const len = gridWidth - matrix[i].length;
+    for (let y = 0; y < matrix.length; y++) {
+      const len = gridWidth - matrix[y].length;
       if (len < 1) {
-        matrix[i].slice(gridWidth, matrix[i].length);
+        matrix[y].slice(gridWidth, matrix[y].length);
       } else {
-        for (let j = 0; j < len; j++) {
-          matrix[i].push(1);
+        for (let x = 0; x < len; x++) {
+          matrix[y].push(1);
         }
       }
     }
-    matrix[15][10] = 0
+    matrix[10][15] = 0
   }
 
   function resizeWindow() {
@@ -71,6 +73,7 @@
     ctx.lineWidth = 1;
 
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    ctx.strokeStyle = 'black'
 
     ctx.fillStyle = 'green';
     ctx.fillRect(start[0] * 20, start[1] * 20, 20, 20);
@@ -105,6 +108,15 @@
       ctx.stroke();
     }
 
+    if (path.length > 1) {
+      ctx.strokeStyle = 'darkred'
+      ctx.beginPath();
+      ctx.moveTo(path[0][0] * 20 + 10.5, path[0][1] * 20 + 10.5);
+      for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(path[i][0] * 20 + 10.5, path[i][1] * 20 + 10.5);
+      }
+      ctx.stroke();
+    }
     changed = false;
     requestAnimationFrame(() => {drawGrid(ctx)});
   }
@@ -142,8 +154,8 @@
 
     const x = Math.floor((e.clientX - 8) / 20);
     const y = Math.floor((e.clientY - 8) / 20);
-    currentPointerValue = matrix[x][y] === 0 ? 1 : 0;
-    matrix[x][y] = currentPointerValue;
+    currentPointerValue = matrix[y][x] === 0 ? 1 : 0;
+    matrix[y][x] = currentPointerValue;
   }
 
   function pointerMoveCanvas(e: PointerEvent) {
@@ -152,21 +164,31 @@
     }
     const x = Math.floor((e.clientX - 8) / 20);
     const y = Math.floor((e.clientY - 8) / 20);
-    matrix[x][y] = currentPointerValue;
+    matrix[y][x] = currentPointerValue;
   }
 
   function pointerUpCanvas() {
     currentPointerValue = -1;
   }
 
-  function runPyScript() {
-    // TODO update grid and start/end on data change by user
-    let code = `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
-    code += `start = grid.node(${start[0]}, ${start[1]})\n`
-    code += `end = grid.node(${end[0]}, ${end[1]})\n`
+  async function runPyScript() {
+    path = []
+    let code = 'path = None\n';
+    code += `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
+    code += `start = grid.node(${start[0]}, ${start[1]})\n`;
+    code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
     console.log(code);
-    pyscript.interpreter.run(code);
+    await pyscript.interpreter.run(code);
+    let pypath: any = pyscript.interpreter.globals.get('path');
+    if (!pypath) {
+      return
+    }
+    for (let i = 0; i < pypath.length; i++) {
+      path.push([pypath.get(i).get(0), pypath.get(i).get(1)])
+    }
+    console.log(path)
+    changed = true;
   }
 </script>
 
@@ -192,6 +214,7 @@ from pathfinding.core.grid import Grid
 ></canvas>
 
 <!-- TODO: select from different code examples -->
+<!-- TODO: move start/end -->
 <div class="fabs" role="group" aria-label="Floating action buttons">
   <button on:click={runPyScript} class="fab" title="Run code" aria-label="Run code">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
