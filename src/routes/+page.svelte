@@ -23,8 +23,8 @@
 
   // note that points here are [x, y] while you access the matrix in [y][x]
   // which allows you to get a full row (all x values) by the column number (y)
-  let start = [10, 9];
-  let end = [20, 11];
+  let start = [-1, -1];
+  let end = [-1, -1];
   let matrix: any = [[WALKABLE]];
 
   let divEl: HTMLDivElement;
@@ -52,7 +52,7 @@
     if (matrix.length < gridHeight) {
       const len = gridHeight - matrix.length;
       if (len < 1) {
-        matrix.slice(gridHeight, matrix.length);
+        matrix = matrix.slice(0, gridHeight);
       } else {
         for (let y = 0; y < len; y++) {
           matrix.push([]);
@@ -62,16 +62,19 @@
     for (let y = 0; y < matrix.length; y++) {
       const len = gridWidth - matrix[y].length;
       if (len < 1) {
-        matrix[y].slice(gridWidth, matrix[y].length);
+        matrix[y] = matrix[y].slice(0, gridWidth);
       } else {
         for (let x = 0; x < len; x++) {
           matrix[y].push(WALKABLE);
         }
       }
     }
-    matrix[9][15] = OBSTACLE;
-    matrix[10][15] = OBSTACLE;
-    matrix[11][15] = OBSTACLE;
+    if (end[0] > gridWidth - 1 || end[1] > gridHeight - 1 || end[0] < 0 || end[1] < 0) {
+      end = [gridWidth - 1 , gridHeight - 1]
+    }
+    if (start[0] > gridWidth || start[1] > gridHeight || start[0] < 0 || start[1] < 0) {
+      start = [0, 0]
+    }
   }
 
   function resizeWindow() {
