@@ -179,15 +179,22 @@
     code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
     console.log(code);
-    await pyscript.interpreter.run(code);
-    let pypath: any = pyscript.interpreter.globals.get('path');
-    if (!pypath) {
-      return
+    const interpreter: any = pyscript.interpreter;
+    await interpreter.run(code);
+    let pypath: any = interpreter.globals.get('path');
+    if (pypath) {
+      for (let i = 0; i < pypath.length; i++) {
+        path.push([pypath.get(i).get(0), pypath.get(i).get(1)])
+      }
     }
-    for (let i = 0; i < pypath.length; i++) {
-      path.push([pypath.get(i).get(0), pypath.get(i).get(1)])
+    let pystart: any = interpreter.globals.get('start');
+    if (pystart) {
+      start = [pystart.x, pystart.y];
     }
-    console.log(path)
+    let pyend: any = interpreter.globals.get('end');
+    if (pyend) {
+      end = [pyend.x, pyend.y];
+    }
     changed = true;
   }
 </script>
