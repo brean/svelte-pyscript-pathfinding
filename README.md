@@ -1,6 +1,6 @@
 # Svelte pyscript pathfinding
 
-Svelte App using pyscript to run [python-pathfinding](https://github.com/brean/python-pathfinding).
+Svelte App using pyscript to run [python-pathfinding](https://github.com/brean/python-pathfinding) in you browser.
 
 ![](docs/screenshot_pyscript_pathfinding.png)
 
