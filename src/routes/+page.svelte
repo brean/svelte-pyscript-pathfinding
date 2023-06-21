@@ -222,7 +222,7 @@
     code += editor.getValue();
     // @ts-ignore
     const interpreter: any = pyscript.interpreter;
-    await interpreter.run(code);
+    await interpreter.interface.runPython(code);
     let pypath: any = interpreter.globals.get('path');
     if (pypath) {
       for (let i = 0; i < pypath.length; i++) {
