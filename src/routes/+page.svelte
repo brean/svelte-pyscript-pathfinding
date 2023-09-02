@@ -225,17 +225,18 @@
     await interpreter.interface.runPython(code);
     let pypath: any = interpreter.globals.get('path');
     if (pypath) {
+      pypath = Array.from(pypath);
       for (let i = 0; i < pypath.length; i++) {
-        path.push([pypath.get(i).get(0), pypath.get(i).get(1)])
+        path.push(Array.from(pypath[i]))
       }
     }
     let pystart: any = interpreter.globals.get('start');
     if (pystart) {
-      start = [pystart.x, pystart.y];
+      start = Array.from(pystart);
     }
     let pyend: any = interpreter.globals.get('end');
     if (pyend) {
-      end = [pyend.x, pyend.y];
+      end = Array.from(pyend);
     }
     changed = true;
   }
