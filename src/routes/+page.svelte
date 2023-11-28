@@ -4,7 +4,16 @@
   import { onMount, tick } from 'svelte';
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
+  const WALKABLE = 1;
+  const OBSTACLE = 0;
+  const START = -2;
+  const END = -3;
+
+  const GRIDSIZE = 20;
+  const GRIDBORDER = GRIDSIZE > 3;
+
   let changed = true;
+  let path: any[] = [];
   let currentPointerValue = -1;
   let innerWidth = 0;
   let innerHeight = 0;
@@ -12,9 +21,11 @@
   let gridWidth = 0;
   let gridHeight = 0;
 
-  let start = [10, 10];
-  let end = [20, 10];
-  let matrix: any = [[1]];
+  // note that points here are [x, y] while you access the matrix in [y][x]
+  // which allows you to get a full row (all x values) by the column number (y)
+  let start = [-1, -1];
+  let end = [-1, -1];
+  let matrix: any = [[WALKABLE]];
 
   let divEl: HTMLDivElement;
   let canvasEl: HTMLCanvasElement;
@@ -23,43 +34,47 @@
   let Monaco;
   let code = ['# Here you can test python-pathfinding directly.',
 '# Press the rocket 🚀 in the bottom right to execute this code.',
-'# The variables grid, start and end are already defined.',
+'# The variables "grid", "matrix", "start" and "end" are already defined by the',
+'# interactive grid on the left, but you can overwrite it here if you want.',
 '# It runs in your local browser using pyscript, there\'s no save!',
 '# If your code does not run take a look at the browsers console for errors.',
+'# You need to provide a variable "path" with points on the map to draw the path on the map',
 '',
 'from pathfinding.finder.a_star import AStarFinder',
 'from pathfinding.core.diagonal_movement import DiagonalMovement',
 '',
 'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)',
-'path, runs = finder.find_path(start, end, grid)',
-'',
-"print('operations:', runs, 'path length:', len(path))",
-"print(grid.grid_str(path=path, start=start, end=end))"].join('\n')
+'path, runs = finder.find_path(start, end, grid)'].join('\n')
 
   function rebuildGrid() {
-    gridHeight = Math.floor(canvasEl.height / 20);
-    gridWidth = Math.floor(canvasEl.width / 20);
-    if (matrix.length < gridWidth) {
-      const len = gridWidth - matrix.length;
+    gridHeight = Math.floor(canvasEl.height / GRIDSIZE);
+    gridWidth = Math.floor(canvasEl.width / GRIDSIZE);
+    if (matrix.length < gridHeight) {
+      const len = gridHeight - matrix.length;
       if (len < 1) {
-        matrix.slice(gridWidth, matrix.length);
+        matrix = matrix.slice(0, gridHeight);
       } else {
-        for (let i = 0; i < len; i++) {
+        for (let y = 0; y < len; y++) {
           matrix.push([]);
         }
       }
     }
-    for (let i = 0; i < matrix.length; i++) {
-      const len = gridHeight - matrix[i].length;
+    for (let y = 0; y < matrix.length; y++) {
+      const len = gridWidth - matrix[y].length;
       if (len < 1) {
-        matrix[i].slice(gridHeight, matrix[i].length);
+        matrix[y] = matrix[y].slice(0, gridWidth);
       } else {
-        for (let j = 0; j < len; j++) {
-          matrix[i].push(1);
+        for (let x = 0; x < len; x++) {
+          matrix[y].push(WALKABLE);
         }
       }
     }
-    matrix[15][10] = 0
+    if (end[0] > gridWidth - 1 || end[1] > gridHeight - 1 || end[0] < 0 || end[1] < 0) {
+      end = [gridWidth - 1 , gridHeight - 1]
+    }
+    if (start[0] > gridWidth || start[1] > gridHeight || start[0] < 0 || start[1] < 0) {
+      start = [0, 0]
+    }
   }
 
   function resizeWindow() {
@@ -68,43 +83,65 @@
   }
 
   function drawGrid(ctx: CanvasRenderingContext2D) {
-    ctx.lineWidth = 1;
-
-    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-
-    ctx.fillStyle = 'green';
-    ctx.fillRect(start[0] * 20, start[1] * 20, 20, 20);
-
-    ctx.fillStyle = 'red';
-    ctx.fillRect(end[0] * 20, end[1] * 20, 20, 20);
-
+    if (!canvasEl) {
+      requestAnimationFrame(() => {drawGrid(ctx)});
+      return
+    }
     if (matrix.length <= 1) {
       rebuildGrid();
     }
+    ctx.lineWidth = 1;
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
+    // draw start and end
+    ctx.fillStyle = 'green';
+    ctx.fillRect(start[0] * GRIDSIZE, start[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+
+    ctx.fillStyle = 'red';
+    ctx.fillRect(end[0] * GRIDSIZE, end[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+
+    // draw obstacles
     ctx.fillStyle = 'gray';
-    for (let x = 0; x < matrix.length; x++) {
-      for (let y = 0; y < matrix[x].length; y++) {
-        if (matrix[x][y] <= 0) {
-          ctx.fillRect(x * 20, y * 20, 20, 20);
+    for (let y = 0; y < matrix.length; y++) {
+      for (let x = 0; x < matrix[y].length; x++) {
+        if (matrix[y][x] <= 0) {
+          ctx.fillRect(x * GRIDSIZE, y * GRIDSIZE, GRIDSIZE, GRIDSIZE);
         }
       }
     }
     
-    for (let i = 0; i < matrix.length+1; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * 20 + 0.5, 0);
-      ctx.lineTo(i * 20 + 0.5, matrix[0].length * 20);
-      ctx.stroke();
+    // draw border
+    if (GRIDBORDER) {
+      ctx.strokeStyle = 'black'
+      for (let i = 0; i < matrix[0].length+1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * GRIDSIZE + 0.5, 0);
+        ctx.lineTo(i * GRIDSIZE + 0.5, matrix.length * GRIDSIZE);
+        ctx.stroke();
+      }
+
+      for (let i = 0; i < matrix.length+1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * GRIDSIZE + 0.5);
+        ctx.lineTo(matrix[0].length * GRIDSIZE, i * GRIDSIZE + 0.5);
+        ctx.stroke();
+      }
     }
 
-    for (let i = 0; i < matrix[0].length+1; i++) {
+    // draw path
+    if (path.length > 1) {
+      ctx.strokeStyle = 'darkred'
       ctx.beginPath();
-      ctx.moveTo(0, i * 20 + 0.5);
-      ctx.lineTo(matrix.length * 20, i * 20 + 0.5);
+      ctx.moveTo(
+        path[0][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+        path[0][1] * GRIDSIZE + GRIDSIZE/2 + .5);
+      for (let i = 1; i < path.length; i++) {
+        ctx.lineTo(
+          path[i][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+          path[i][1] * GRIDSIZE + GRIDSIZE/2 + .5);
+      }
       ctx.stroke();
     }
-
     changed = false;
     requestAnimationFrame(() => {drawGrid(ctx)});
   }
@@ -139,34 +176,69 @@
   });
 
   function pointerDownCanvas(e: PointerEvent) {
+    const x = Math.floor((e.clientX - 8) / GRIDSIZE);
+    const y = Math.floor((e.clientY - 8) / GRIDSIZE);
+    // check for start/end Point
+    if (start && start[0] == x && start[1] == y) {
+      currentPointerValue = START;
+      return
+    }
+    if (end && end[0] == x && end[1] == y) {
+      currentPointerValue = END;
+      return
+    }
 
-    const x = Math.floor((e.clientX - 8) / 20);
-    const y = Math.floor((e.clientY - 8) / 20);
-    currentPointerValue = matrix[x][y] === 0 ? 1 : 0;
-    matrix[x][y] = currentPointerValue;
+    currentPointerValue = matrix[y][x] === OBSTACLE ? WALKABLE : OBSTACLE;
+    matrix[y][x] = currentPointerValue;
   }
 
   function pointerMoveCanvas(e: PointerEvent) {
     if (currentPointerValue === -1) {
       return
     }
-    const x = Math.floor((e.clientX - 8) / 20);
-    const y = Math.floor((e.clientY - 8) / 20);
-    matrix[x][y] = currentPointerValue;
+    const x = Math.floor((e.clientX - 8) / GRIDSIZE);
+    const y = Math.floor((e.clientY - 8) / GRIDSIZE);
+    if (currentPointerValue === START) {
+      start = [x, y];
+      return
+    }
+    if (currentPointerValue === END) {
+      end = [x, y];
+      return
+    }
+    matrix[y][x] = currentPointerValue;
   }
 
   function pointerUpCanvas() {
     currentPointerValue = -1;
   }
 
-  function runPyScript() {
-    // TODO update grid and start/end on data change by user
-    let code = `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
-    code += `start = grid.node(${start[0]}, ${start[1]})\n`
-    code += `end = grid.node(${end[0]}, ${end[1]})\n`
+  async function runPyScript() {
+    path = []
+    let code = 'path = []\n';
+    code += `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
+    code += `start = grid.node(${start[0]}, ${start[1]})\n`;
+    code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
-    console.log(code);
-    pyscript.interpreter.run(code);
+    // @ts-ignore
+    const interpreter: any = pyscript.interpreter;
+    await interpreter.interface.runPython(code);
+    let pypath: any = interpreter.globals.get('path');
+    if (pypath) {
+      pypath = Array.from(pypath);
+      for (let i = 0; i < pypath.length; i++) {
+        path.push(Array.from(pypath[i]))
+      }
+    }
+    let pystart: any = interpreter.globals.get('start');
+    if (pystart) {
+      start = Array.from(pystart);
+    }
+    let pyend: any = interpreter.globals.get('end');
+    if (pyend) {
+      end = Array.from(pyend);
+    }
+    changed = true;
   }
 </script>
 
