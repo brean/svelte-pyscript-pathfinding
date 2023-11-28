@@ -39,10 +39,10 @@
   function rebuildGrid() {
     gridHeight = Math.floor(canvasEl.height / 20);
     gridWidth = Math.floor(canvasEl.width / 20);
-    if (matrix.length < gridHeight) {
-      const len = gridHeight - matrix.length;
+    if (matrix.length < gridWidth) {
+      const len = gridWidth - matrix.length;
       if (len < 1) {
-        matrix.slice(gridHeight, matrix.length);
+        matrix.slice(gridWidth, matrix.length);
       } else {
         for (let i = 0; i < len; i++) {
           matrix.push([]);
@@ -50,9 +50,9 @@
       }
     }
     for (let i = 0; i < matrix.length; i++) {
-      const len = gridWidth - matrix[i].length;
+      const len = gridHeight - matrix[i].length;
       if (len < 1) {
-        matrix[i].slice(gridWidth, matrix[i].length);
+        matrix[i].slice(gridHeight, matrix[i].length);
       } else {
         for (let j = 0; j < len; j++) {
           matrix[i].push(1);
@@ -83,25 +83,25 @@
     }
 
     ctx.fillStyle = 'gray';
-    for (let y = 0; y < matrix.length; y++) {
-      for (let x = 0; x < matrix[y].length; x++) {
-        if (matrix[y][x] <= 0) {
+    for (let x = 0; x < matrix.length; x++) {
+      for (let y = 0; y < matrix[x].length; y++) {
+        if (matrix[x][y] <= 0) {
           ctx.fillRect(x * 20, y * 20, 20, 20);
         }
       }
     }
     
-    for (let i = 0; i < matrix[0].length+1; i++) {
+    for (let i = 0; i < matrix.length+1; i++) {
       ctx.beginPath();
       ctx.moveTo(i * 20 + 0.5, 0);
-      ctx.lineTo(i * 20 + 0.5, matrix.length * 20);
+      ctx.lineTo(i * 20 + 0.5, matrix[0].length * 20);
       ctx.stroke();
     }
 
-    for (let i = 0; i < matrix.length+1; i++) {
+    for (let i = 0; i < matrix[0].length+1; i++) {
       ctx.beginPath();
       ctx.moveTo(0, i * 20 + 0.5);
-      ctx.lineTo(matrix[0].length * 20, i * 20 + 0.5);
+      ctx.lineTo(matrix.length * 20, i * 20 + 0.5);
       ctx.stroke();
     }
 
