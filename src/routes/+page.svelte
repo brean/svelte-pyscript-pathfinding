@@ -32,19 +32,40 @@
   let editor: monaco.editor.IStandaloneCodeEditor;
   
   let Monaco;
-  let code = ['# Here you can test python-pathfinding directly.',
-'# Press the rocket 🚀 in the bottom right to execute this code.',
-'# The variables "grid", "matrix", "start" and "end" are already defined by the',
-'# interactive grid on the left, but you can overwrite it here if you want.',
-'# It runs in your local browser using pyscript, there\'s no save!',
-'# If your code does not run take a look at the browsers console for errors.',
-'# You need to provide a variable "path" with points on the map to draw the path on the map',
-'',
-'from pathfinding.finder.a_star import AStarFinder',
-'from pathfinding.core.diagonal_movement import DiagonalMovement',
-'',
-'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)',
-'path, runs = finder.find_path(start, end, grid)'].join('\n')
+  const code_templates: {[name: string]: string} = {
+    a_star: ['from pathfinding.finder.a_star import AStarFinder',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = AStarFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    dijkstra: ['from pathfinding.finder.dijkstra import DijkstraFinder',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = DijkstraFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    best_first: ['from pathfinding.finder.best_first import BestFirst',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = BestFirst(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    bi_a_star: ['from pathfinding.finder.bi_a_star import BiAStarFinder',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = BiAStarFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    breadth_first: ['from pathfinding.finder.breadth_first import BreadthFirstFinder',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = BreadthFirstFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    // ida_star: ['from pathfinding.finder.ida_star import IDAStarFinder',
+    //   'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+    //   'finder = IDAStarFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    msp: ['from pathfinding.finder.msp import MinimumSpanningTree',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = MinimumSpanningTree(diagonal_movement=DiagonalMovement.always)'].join('\n')
+  }
+
+  let code = [
+    '# Here you can test python-pathfinding directly.',
+    '# Press the rocket 🚀 in the bottom right to execute this code.',
+    '# The variables "grid", "matrix", "start" and "end" are already defined by the',
+    '# interactive grid on the left, but you can overwrite it here if you want.',
+    '# It runs in your local browser using pyscript, there\'s no save!',
+    '# If your code does not run take a look at the browsers console for errors.',
+    '# You need to provide a variable "path" with points on the map to draw the path on the map',
+    code_templates['a_star'],
+    'path, runs = finder.find_path(start, end, grid)'].join('\n');
 
   function rebuildGrid() {
     gridHeight = Math.floor(canvasEl.height / GRIDSIZE);
@@ -246,7 +267,7 @@
 from pathfinding.core.grid import Grid
 </py-script>
 
-<div bind:this={divEl} class="me" />
+<div bind:this={divEl} class="monaco_editor" />
 
 <svelte:window 
   bind:innerHeight={innerHeight}
@@ -263,7 +284,22 @@ from pathfinding.core.grid import Grid
   style={'top: 8px; left: 8px; position: absolute'}
 ></canvas>
 
-<!-- TODO: select from different code examples -->
+<div class="scenario-select">
+  <select on:change={(e)=>{
+    code = code_templates[e?.target?.value];
+    editor.setValue(code+'\npath, runs = finder.find_path(start, end, grid)');
+    }}>
+    <option value="a_star" selected>A*</option>
+    <option value="dijkstra">Dijkstra</option>
+    <option value="best_first">Best First</option>
+    <option value="bi_a_star">Bi-directional A*</option>
+    <option value="breadth_first">Breadth First Search (BFS)</option>
+    <!-- THIS CRASHES! option value="ida_star">Iterative Deeping A* (IDA*)</option-->
+    <option value="msp">Minimum Spanning Tree (MSP)</option>
+  </select>
+</div>
+
+
 <div class="fabs" role="group" aria-label="Floating action buttons">
   <button on:click={runPyScript} class="fab" title="Run code" aria-label="Run code">
     <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24">
