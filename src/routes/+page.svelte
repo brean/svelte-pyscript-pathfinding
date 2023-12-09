@@ -14,6 +14,7 @@
 
   let changed = true;
   let path: any[] = [];
+  let nodes: any[] = []
   let currentPointerValue = -1;
   let innerWidth = 0;
   let innerHeight = 0;
@@ -114,12 +115,43 @@
     ctx.lineWidth = 1;
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
 
-    // draw start and end
-    ctx.fillStyle = 'green';
-    ctx.fillRect(start[0] * GRIDSIZE, start[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+    // show which nodes have been visited during search
+    if (nodes.length > 0) {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = 0; j < nodes[i].length; j++) {
+          if (nodes[i][j] == 0) {
+            continue
+          }
+          ctx.fillStyle = '#cccccc';
+          ctx.fillRect(
+            j * GRIDSIZE, 
+            i * GRIDSIZE, 
+            GRIDSIZE, GRIDSIZE);
+        }
+      }
+    }
 
-    ctx.fillStyle = 'red';
-    ctx.fillRect(end[0] * GRIDSIZE, end[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+    // draw path
+    if (path.length > 1) {
+      ctx.strokeStyle = 'darkred'
+      ctx.beginPath();
+      ctx.moveTo(
+        path[0][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+        path[0][1] * GRIDSIZE + GRIDSIZE/2 + .5);
+      for (let i = 1; i < path.length; i++) {
+        if (i < path.length-1) {
+          ctx.fillStyle = '#ff9a4b';
+          ctx.fillRect(
+            path[i][0] * GRIDSIZE, 
+            path[i][1] * GRIDSIZE, 
+            GRIDSIZE, GRIDSIZE);
+        }
+        ctx.lineTo(
+          path[i][0] * GRIDSIZE + GRIDSIZE/2 + .5,
+          path[i][1] * GRIDSIZE + GRIDSIZE/2 + .5);
+      }
+      ctx.stroke();
+    }
 
     // draw obstacles
     ctx.fillStyle = 'gray';
@@ -130,7 +162,14 @@
         }
       }
     }
-    
+
+    // draw start and end
+    ctx.fillStyle = 'green';
+    ctx.fillRect(start[0] * GRIDSIZE, start[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+
+    ctx.fillStyle = 'red';
+    ctx.fillRect(end[0] * GRIDSIZE, end[1] * GRIDSIZE, GRIDSIZE, GRIDSIZE);
+   
     // draw border
     if (GRIDBORDER) {
       ctx.strokeStyle = 'black'
@@ -149,20 +188,6 @@
       }
     }
 
-    // draw path
-    if (path.length > 1) {
-      ctx.strokeStyle = 'darkred'
-      ctx.beginPath();
-      ctx.moveTo(
-        path[0][0] * GRIDSIZE + GRIDSIZE/2 + .5,
-        path[0][1] * GRIDSIZE + GRIDSIZE/2 + .5);
-      for (let i = 1; i < path.length; i++) {
-        ctx.lineTo(
-          path[i][0] * GRIDSIZE + GRIDSIZE/2 + .5,
-          path[i][1] * GRIDSIZE + GRIDSIZE/2 + .5);
-      }
-      ctx.stroke();
-    }
     changed = false;
     requestAnimationFrame(() => {drawGrid(ctx)});
   }
@@ -236,8 +261,10 @@
 
   async function runPyScript() {
     path = []
+    nodes = []
     let code = 'path = []\n';
     code += `grid = Grid(matrix=${JSON.stringify(matrix)})\n`;
+    code += `_nodes = grid.nodes\n`;
     code += `start = grid.node(${start[0]}, ${start[1]})\n`;
     code += `end = grid.node(${end[0]}, ${end[1]})\n`;
     code += editor.getValue();
@@ -258,6 +285,18 @@
     let pyend: any = interpreter.globals.get('end');
     if (pyend) {
       end = Array.from(pyend);
+    }
+    
+    let pynodes = interpreter.globals.get('_nodes')
+    if (pynodes) {
+      pynodes = Array.from(pynodes);
+      for (let i = 0; i < pynodes.length; i++) {
+        nodes[i] = []
+        let tmp_nodes = Array.from(pynodes[i]);
+        for (let j = 0; j < tmp_nodes.length; j++) {
+          nodes[i][j] = tmp_nodes[j]['f']
+        }
+      }
     }
     changed = true;
   }
