@@ -119,7 +119,7 @@
     if (nodes.length > 0) {
       for (let i = 0; i < nodes.length; i++) {
         for (let j = 0; j < nodes[i].length; j++) {
-          if (nodes[i][j] == 0) {
+          if (nodes[i][j].f == 0 || !nodes[i][j].opened) {
             continue
           }
           ctx.fillStyle = '#cccccc';
@@ -294,7 +294,10 @@
         nodes[i] = []
         let tmp_nodes = Array.from(pynodes[i]);
         for (let j = 0; j < tmp_nodes.length; j++) {
-          nodes[i][j] = tmp_nodes[j]['f']
+          const tmp_node: {f: number, opened: boolean} = tmp_nodes[j] as any;
+          nodes[i][j] = {
+            f: tmp_node['f'], 
+            opened: tmp_node['opened']}
         }
       }
     }
