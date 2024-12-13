@@ -4,6 +4,7 @@
   import { onMount, tick } from 'svelte';
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
+  let loading = true;
   const WALKABLE = 1;
   const OBSTACLE = 0;
   const START = -2;
@@ -217,7 +218,9 @@
       await tick()
       requestAnimationFrame(() => {drawGrid(ctx)});
     }
-
+    
+    loading = false;
+    
     return () => {
       editor.dispose();
     };
@@ -292,7 +295,15 @@
 
 </script>
 
-<py-script config="./pyscript.json">
+{#if loading}
+<div class="lds-dual-ring loading-color"></div>
+<div class="loading-text loading-color">
+Loading, please wait...
+</div>
+{/if}
+
+{#if !loading}
+<py-script>
 from pathfinding.core.grid import Grid
 from pyodide.ffi import create_proxy, to_js
 from js import grid_to_py, update_path
@@ -321,7 +332,7 @@ find_path_proxy = add_one_proxy = create_proxy(find_path)
 run_code_btn = js.document.getElementById('run_code')
 run_code_btn.addEventListener("click", find_path_proxy)
 </py-script>
-
+{/if}
 <div bind:this={divEl} class="monaco_editor"></div>
 
 <svelte:window 
@@ -339,8 +350,10 @@ run_code_btn.addEventListener("click", find_path_proxy)
   style={'top: 8px; left: 8px; position: absolute'}
 ></canvas>
 
+{#if !loading}
 <div class="scenario-select">
   <select on:change={(e)=>{
+    // @ts-ignore
     code = code_templates[e?.target?.value];
     editor.setValue(code+'\npath, runs = finder.find_path(start, end, grid)');
     }}>
@@ -362,3 +375,4 @@ run_code_btn.addEventListener("click", find_path_proxy)
     </svg>
   </button>
 </div>
+{/if}
