@@ -4,8 +4,8 @@
   import { onMount, tick } from 'svelte';
   import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
-  let loading_ui = true;
-  let loading_py = true;
+  let loading_ui = $state(true);
+  let loading_py = $state(true);
   const WALKABLE = 1;
   const OBSTACLE = 0;
   const START = -2;
@@ -18,8 +18,8 @@
   let path: [x: number, y: number][] = [];
   let nodes: {f: number, opened: boolean}[][] = [[]]
   let currentPointerValue = -1;
-  let innerWidth = 0;
-  let innerHeight = 0;
+  let innerWidth = $state(0);
+  let innerHeight = $state(0);
 
   let gridWidth = 0;
   let gridHeight = 0;
@@ -345,14 +345,14 @@ loading_py_done();
 <svelte:window 
   bind:innerHeight={innerHeight}
   bind:innerWidth={innerWidth}
-  on:resize={resizeWindow} />
+  onresize={resizeWindow} />
 
 <canvas
   style:display={loading_py ? 'none' : 'block'}
 	bind:this={canvasEl}
-  on:pointerdown={pointerDownCanvas}
-  on:pointermove={pointerMoveCanvas}
-  on:pointerup={pointerUpCanvas}
+  onpointerdown={pointerDownCanvas}
+  onpointermove={pointerMoveCanvas}
+  onpointerup={pointerUpCanvas}
 	width={innerWidth/2-16}
 	height={innerHeight-16}
   style:top={'8px;'}
@@ -362,7 +362,7 @@ loading_py_done();
 
 {#if !loading_ui}
 <div class="scenario-select" style:display={loading_py ? 'none' : 'block'}>
-  <select on:change={(e)=>{
+  <select onchange={(e)=>{
     // @ts-ignore
     code = code_templates[e?.target?.value];
     editor.setValue(code+'\npath, runs = finder.find_path(start, end, grid)');
