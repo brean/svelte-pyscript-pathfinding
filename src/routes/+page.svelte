@@ -48,6 +48,9 @@
     bi_a_star: ['from pathfinding.finder.bi_a_star import BiAStarFinder',
       'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
       'finder = BiAStarFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
+    bi_breadth_first: ['from pathfinding.finder.bi_breadth_first import BiBreadthFirstFinder',
+      'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
+      'finder = BiBreadthFirstFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
     breadth_first: ['from pathfinding.finder.breadth_first import BreadthFirstFinder',
       'from pathfinding.core.diagonal_movement import DiagonalMovement', '',
       'finder = BreadthFirstFinder(diagonal_movement=DiagonalMovement.always)'].join('\n'),
@@ -372,6 +375,7 @@ loading_py_done();
     <option value="best_first">Best First</option>
     <option value="bi_a_star">Bi-directional A*</option>
     <option value="breadth_first">Breadth First Search (BFS)</option>
+    <option value="bi_breadth_first">Bi-Breadth First Search (Bi-BFS)</option>
     <option value="ida_star">Iterative Deeping A* (IDA*)</option>
     <option value="msp">Minimum Spanning Tree (MSP)</option>
   </select>
